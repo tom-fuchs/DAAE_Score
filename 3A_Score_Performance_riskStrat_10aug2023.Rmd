@@ -1,0 +1,135 @@
+---
+title: "Primary Score Validation, Risk Stratification"
+---
+
+```{r}
+
+#### DESAA Score Performance
+cat("patients per risk score in full database\n")
+table(imputed_merged$desaa)
+cat("\n\npatients per risk group in full databasep\n")
+table(imputed_merged$desaa_group4)
+cat("\npercent\n")
+table(imputed_merged$desaa_group4)/nrow(imputed_merged)*100
+cat(nrow(imputed_merged))
+cat("\n\n")
+
+#define function for reporting conversion proportions
+conf_ints_conv<-function(props, sums){
+  100*BinomCI(props,sums,conf.level=0.95,method="clopper-pearson")["x.1",]
+}
+
+
+cat("###########################################################################
+##DESAA Proportions Conversion Per Risk Group in Full Database
+###########################################################################\n\n")
+
+#risk group proportions
+for (i in c("very low", "low", "medium", "high")){
+  risk_num<-paste("risk",i, sep = "")
+  proportion_report_title<-paste("Converters versus Stable in RRMS Patient With Risk Group",i)
+  print(proportion_report_title)
+  risk_num_db<-imputed_merged %>% filter(desaa_group4==i)
+  t<-table(factor(risk_num_db$conversion, levels = c("convert", "stable")))
+  converters<-t[["convert"]][1]
+  stable<-t[["stable"]][1]
+  props<-c(converters, stable)
+  print(props)
+  sums<-sum(converters,stable)
+  f<-conf_ints_conv(props,sums)
+  print(paste("Percent Conversion in Patients with Risk Score", i))
+  print(f)
+  print(converters)
+  print(stable)
+  print(sums)
+  cat("\n\n")
+}
+
+
+```
+
+
+
+```{r}
+
+#### DESAA Score Performance in separate training and testing datasets
+
+#define function for reporting conversion proportions
+conf_ints_conv<-function(props, sums){
+  100*BinomCI(props,sums,conf.level=0.95,method="clopper-pearson")["x.1",]
+}
+
+
+cat("###########################################################################
+##Proportions Conversion Per Risk Group in Training Dataset
+###########################################################################\n\n")
+
+cat("\npatients per risk score\n")
+table(course.train$desaa)
+cat("\npercent per risk score\n")
+table(course.train$desaa)/nrow(course.train)*100
+cat("\n\npatients per risk group\n")
+table(course.train$desaa_group4)
+cat("\n\npercent per risk group\n")
+table(course.train$desaa_group4)/nrow(course.train)*100
+cat("\n\n")
+
+
+#risk group proportions
+for (i in c("very low", "low", "medium", "high")){
+  risk_num<-paste("risk",i, sep = "")
+  proportion_report_title<-paste("Converters versus Stable in RRMS Patient With Risk Group",i)
+  print(proportion_report_title)
+  risk_num_db<-course.train %>% filter(desaa_group4==i)
+  t<-table(factor(risk_num_db$conversion, levels = c("convert", "stable")))
+  converters<-t[["convert"]][1]
+  stable<-t[["stable"]][1]
+  props<-c(converters, stable)
+  print(props)
+  sums<-sum(converters,stable)
+  f<-conf_ints_conv(props,sums)
+  print(paste("Percent Conversion in Patients with Risk Score", i))
+  print(f)
+  print(converters)
+  print(stable)
+  print(sums)
+  cat("\n\n")
+}
+
+
+cat("###########################################################################
+##Proportions Conversion Per Risk Group in Testing Dataset
+###########################################################################\n\n")
+
+cat("\npatients per risk score\n")
+table(course.test$desaa)
+cat("\npercent per risk score\n")
+table(course.test$desaa)/nrow(course.test)*100
+cat("\n\npatients per risk group\n")
+table(course.test$desaa_group4)
+cat("\n\npercent per risk group\n")
+table(course.test$desaa_group4)/nrow(course.test)*100
+cat("\n\n")
+
+#risk group proportions
+for (i in c("very low", "low", "medium", "high")){
+  risk_num<-paste("risk",i, sep = "")
+  proportion_report_title<-paste("Converters versus Stable in RRMS Patient With Risk Group",i)
+  print(proportion_report_title)
+  risk_num_db<-course.test %>% filter(desaa_group4==i)
+  t<-table(factor(risk_num_db$conversion, levels = c("convert", "stable")))
+  converters<-t[["convert"]][1]
+  stable<-t[["stable"]][1]
+  props<-c(converters, stable)
+  print(props)
+  sums<-sum(converters,stable)
+  f<-conf_ints_conv(props,sums)
+  print(paste("Percent Conversion in Patients with Risk Score", i))
+  print(f)
+  print(converters)
+  print(stable)
+  print(sums)
+  cat("\n\n")
+}
+
+```

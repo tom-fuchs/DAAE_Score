@@ -1,0 +1,205 @@
+---
+title: "Secondary Score Performance Validation: Binary Prediction Accuracy"
+---
+
+# To-Do
+## Add report of accuracy of logistic regression model with 95% bootstrapped confidence intervals. 
+
+```{r}
+#create data-sets for binary predictions
+
+#training
+train_dat_prep<-course.train %>% ungroup() %>%
+  mutate(conversion=factor(conversion)) %>% 
+  dplyr::select(conversion, conversion_numeric, baseline_EDSS, 
+                baseline_ddy, Cumulative_Relapse_Total, onset_age,
+                Sex_m_np_nysmsc, Race_m_np_nysmsc, age_baseline, desaa) %>% filter(!is.na(conversion)) 
+names(train_dat_prep)<- trim(names(train_dat_prep))
+
+#test
+test_dat_prep<-course.test %>% ungroup() %>%
+  mutate(conversion=factor(conversion)) %>% 
+  dplyr::select(conversion, conversion_numeric, baseline_EDSS, 
+                baseline_ddy, Cumulative_Relapse_Total, onset_age,
+                Sex_m_np_nysmsc, Race_m_np_nysmsc, age_baseline, desaa) %>% filter(!is.na(conversion)) 
+names(test_dat_prep)<- trim(names(test_dat_prep))
+
+```
+
+
+```{r}
+############################################################
+## SMOTE and TOMEK, data balancing for binary predictions
+############################################################
+
+#train
+train_dat_prep
+smoted_train_dat<- SMOTE(conversion ~ ., train_dat_prep, perc.over=200, k=5, perc.under = 100)
+table(train_dat_prep$conversion)
+table(smoted_train_dat$conversion)
+
+smoted_test_dat<- SMOTE(conversion ~ ., test_dat_prep, perc.over=200, k=5, perc.under = 100)
+table(test_dat_prep$conversion)
+table(smoted_test_dat$conversion)
+
+#write databases to file for reproducibility
+# write.csv(smoted_train_dat, file="C:/Users/Tom/Dropbox/Documents/Studies/PMS_prediction/Analyses/Buffalo/databases_processed/JMSC_train_dat_balanced_16june2023.csv")
+# write.csv(smoted_test_dat, file="C:/Users/Tom/Dropbox/Documents/Studies/PMS_prediction/Analyses/Buffalo/databases_processed/JMSC_test_dat_balanced_16june2023.csv")
+
+
+
+```
+
+
+
+
+
+```{r}
+############################################################
+# Adapted binary lgistic regression with balanced data
+# 
+#########################################################
+
+
+
+cat("\nRisk Score effect on probability of conversion\n") 
+cat("
+
+######################################
+Accuracy in Training Data
+######################################
+
+")
+#Create logistic model
+log_mod<-glm(as.factor(conversion_numeric)~desaa, data = smoted_train_dat, family=binomial)
+#save for external/future use
+save(log_mod, file = "logistic_regression_DAAE_score_model.rda")
+#load saved model for present use
+load("logistic_regression_DAAE_score_model.rda")
+
+fitted.results <- predict(log_mod, smoted_train_dat, type='response')
+
+#AUC
+test_roc1 = roc(smoted_train_dat$conversion_numeric ~ fitted.results, plot = TRUE, print.auc = TRUE)
+title("DAAE Score Prediction of Phenotype Conversion \nArea Under Curve in Training Set")
+cat("\n\nAUC in Training Set With 95% Confidence Interval:", ci(test_roc1))
+#Brier Score
+b<-brier(smoted_train_dat$conversion_numeric, fitted.results)
+cat("\n\nBrier Score in Training Set:", b$bs)
+
+cat("
+
+######################################
+Accuracy in Test Data
+######################################
+
+")
+# log_mod<-glm(as.factor(conversion_numeric)~desaa_summary, data = course.train, family=binomial)
+fitted.results <- predict(log_mod, smoted_test_dat, type='response')
+#AUC
+test_roc1 = roc(smoted_test_dat$conversion_numeric ~ fitted.results, plot = TRUE, print.auc = TRUE)
+# title("DAAE Score Prediction of Phenotype Conversion \nArea Under Curve in Separate Test Set")
+cat("\n\nAUC in Test Set With 95% Confidence Interval:", ci(test_roc1))
+#Brier Score
+b<-brier(smoted_test_dat$conversion_numeric, fitted.results)
+cat("\n\nBrier Score in Test Set:", b$bs)
+
+
+```
+
+
+
+
+
+```{r}
+
+
+##########################################################
+# Report of model accuracy from score in logreg. 
+## Must still be adapted from code provided by chatgpt
+##########################################################
+
+#ensure no missing data
+smoted_train_dat_log<-smoted_train_dat %>% na.omit()
+smoted_test_dat_log<-smoted_test_dat %>% na.omit()
+
+# Train the logistic regression model
+log_model_for_accuracy <- glm(conversion_numeric ~ desaa, data = smoted_train_dat_log, family = "binomial")
+
+# Calculate the predicted probabilities
+predicted_probabilities_train <- predict(log_model_for_accuracy, newdata = smoted_train_dat_log, type = "response")
+predicted_probabilities_test <- predict(log_model_for_accuracy, newdata = smoted_test_dat_log, type = "response")
+
+# Determine the optimal cutoffs
+# roc_obj_train <- roc(smoted_train_dat$conversion_numeric, predicted_probabilities_train)
+# roc_obj_train$sensitivities
+
+# set cutoff to 0.5
+
+# cutoffs_train <- coords(roc_obj_train, "best")
+# optimal_sensitivity_train <- cutoffs_train$sensitivity
+# optimal_specificity_train <- cutoffs_train$specificity
+
+
+# Classify the predicted probabilities using the optimal cutoffs
+predicted_labels_train <- ifelse(predicted_probabilities_train >= 0.5, 1, 0)
+predicted_labels_test <- ifelse(predicted_probabilities_test >= 0.5, 1, 0)
+
+# Calculate accuracy
+train_accuracy<-sum(predicted_labels_train == smoted_train_dat$conversion_numeric, na.rm=TRUE) / nrow(smoted_train_dat)
+test_accuracy<-sum(predicted_labels_test == smoted_test_dat$conversion_numeric, na.rm=TRUE) / nrow(smoted_test_dat)
+
+set.seed(234)
+# Perform bootstrapping to estimate confidence intervals
+accuracy <- function(data, indices) {
+  # Subset the data using the bootstrap sample indices
+  bootstrap_data <- data[indices, ]
+  
+  # Fit the logistic regression model on the bootstrap sample
+  model <- glm(formula = conversion_numeric ~ desaa, data = bootstrap_data, family = "binomial")
+  
+  # Make predictions on the bootstrap sample
+  predictions <- predict(model, newdata = bootstrap_data, type = "response")
+  
+  # Extract the actual values from the full dataset
+  actual <- bootstrap_data$conversion_numeric
+  
+  # Convert probabilities to binary predictions
+  predicted <- ifelse(predictions > 0.5, 1, 0)
+  
+  # Compute accuracy
+  acc <- sum(predicted == actual) / length(actual)
+  
+  return(acc)
+}
+
+#run frunction for 95% CI (bootsrapped) of model accuracy
+set.seed(234)
+boot_results_train<-boot(data = smoted_train_dat_log, statistic=accuracy, R=1000)
+boot_results_test<-boot(data = smoted_test_dat_log, statistic=accuracy, R=1000)
+conf_intervals_train<-boot.ci(boot_results_train, type="bca")
+conf_intervals_test<-boot.ci(boot_results_test, type="bca")
+
+#print accuracy and 95% CI in train
+cat("
+accuracy in Train dat
+    ")
+train_accuracy
+cat("
+    95% CI in train dat")
+conf_intervals_train
+
+#print in test
+cat("
+    accuracy in test dat
+    ")
+test_accuracy
+cat("95% CI in test dat
+    ")
+conf_intervals_test
+
+
+
+
+```
+

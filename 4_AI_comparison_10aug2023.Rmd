@@ -1,0 +1,109 @@
+---
+title: "Secondary Score performance validation, AI Comparison"
+---
+
+```{r}
+
+########################################################################
+# Machine learning comparison with gradient boosting decision tree
+########################################################################
+
+#set data
+boost_smoted_train_dat<-smoted_train_dat %>% dplyr::select(!conversion) %>% dplyr::select(!desaa) %>% 
+  dplyr::select(!Cumulative_Relapse_Total) %>% dplyr::select(!Race_m_np_nysmsc) %>% 
+  rename(sex = Sex_m_np_nysmsc, baseline_age=age_baseline) %>% 
+  na.omit()
+boost_smoted_test_dat<-smoted_test_dat %>% dplyr::select(!conversion) %>% dplyr::select(!desaa) %>% 
+  dplyr::select(!Cumulative_Relapse_Total) %>% dplyr::select(!Race_m_np_nysmsc) %>% 
+  rename(sex = Sex_m_np_nysmsc, baseline_age=age_baseline) %>% 
+  na.omit()
+  
+#machine_learning comparison. Gradient boosting decision tree. 
+
+#Define hyperparameter grid
+hyperparameters <- expand.grid(
+  n.trees = c(50, 75, 100, 125, 150),          # Number of trees
+  interaction.depth = c(2, 3, 4),     # Interaction depth
+  shrinkage = c(0.1, 0.01, 0.001),    # Shrinkage/learning rate
+  n.minobsinnode = c(10, 20, 30)      # Minimum number of observations in a terminal node
+)
+
+# Define the control parameters for the caret train function
+ctrl <- trainControl(method = "cv",    # Cross-validation
+                     number = 10)       # Number of folds
+
+#perform the grid search
+grid_search <- train(conversion_numeric ~ .,     # Specify the formula for the model
+                     data = boost_smoted_train_dat,        # Training data
+                     method = "gbm",           # Use the gbm method
+                     trControl = ctrl,         # Control parameters for the train function
+                     tuneGrid = hyperparameters)   # Grid of hyperparameters
+
+
+#Set best tuning parameters
+best_tune <-grid_search$bestTune
+
+#fit by best tune. 
+fit = gbm(conversion_numeric ~ ., data=boost_smoted_train_dat, distribution = "bernoulli",
+                  n.trees = best_tune$n.trees, shrinkage = best_tune$shrinkage, 
+          interaction.depth = best_tune$interaction.depth, n.minobsinnode = best_tune$n.minobsinnode)
+
+#summary of relative importance
+summary(fit, method=relative.influence, las=2, cBars=6)
+
+# graph of relative importance
+vip(fit)
+```
+
+
+
+```{r}
+cat("
+
+#############################################################
+Accuracy of Machine Learning Model in Training Data
+#############################################################
+
+")
+
+pred.prob <- predict(fit, newdata = boost_smoted_train_dat, type='response')
+test_roc = roc(boost_smoted_train_dat$conversion_numeric ~ pred.prob, plot=TRUE, print.auc=TRUE)
+cat("\n\nAUC in Test Set With 95% Confidence Interval:", ci(test_roc))
+#Brier Score
+fitted.results <- predict(fit, boost_smoted_train_dat, type='response')
+b<-brier(boost_smoted_train_dat$conversion_numeric, fitted.results)
+cat("\n\nBrier Score in Test Set:", b$bs)
+
+
+cat("
+
+#########################################################
+Accuracy of machine learning model in Testing Data
+#########################################################
+
+")
+pred.prob <- predict(fit, boost_smoted_test_dat, type='response')
+test_roc = roc(boost_smoted_test_dat$conversion_numeric ~ pred.prob, plot=TRUE, print.auc=TRUE)
+cat("\n\nAUC in Test Set With 95% Confidence Interval:", ci(test_roc))
+
+#Brier Score
+fitted.results <- predict(fit, boost_smoted_test_dat, type='response')
+b<-brier(boost_smoted_test_dat$conversion_numeric, fitted.results)
+cat("\n\nBrier Score in Test Set:", b$bs)
+
+
+cat("\n\n#################################################################
+# Direct comparison of fit in test set, DESAA score versus GBM
+#################################################################\n")
+#non-significantly different! DESAA working just as well as GBM on test set
+roc.test(test_roc1,test_roc)
+
+```
+
+
+```{r}
+#export fit for external validation and reproducibility
+saveRDS(fit, file = "C:/Users/Tom/Dropbox/Documents/Studies/PMS_prediction/Analyses/Buffalo/databases_processed/gbm_model_fit_22june2023")
+
+```
+

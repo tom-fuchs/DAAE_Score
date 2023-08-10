@@ -1,0 +1,100 @@
+---
+title: "Impute and Separate into Development and Internal Validation Datasets"
+---
+
+
+```{r}
+# Imputation. Remove variable from db entered to imputation if you do not want it included in the imputation at all
+inverse_of_impute_db <- first_row_for_analysis %>% dplyr::select(Subject_ID, conversion, doo, 
+  dod, dob, Deceased, Marital_m_nysmsc, Visit_Date, ms_course, 
+  baseline_date, ms_course_baseline, visit_datedif, years_observed, 
+  dmt_at_baseline_name, second_line_therapy, last_date, baseline_year, last_year, conversion,
+  conversion_numeric, time_to_conversion, conversion_date, baseline_EDSS, year_of_birth)
+
+impute_db<-first_row_for_analysis %>% dplyr::select(Subject_ID, dmt_at_baseline_bin, dmt_at_baseline_type, years_observed,
+                                                     Sex_m_np_nysmsc, Race_m_np_nysmsc,  
+                                                     baseline_ddy, Cumulative_Relapse_Total, 
+                                                     onset_age, baseline_age, smoked, Education_Years, 
+                                                    education_level, baseline_hypertension, 
+                                                    employment_level, baseline_bmi) %>%
+  mutate(Sex_m_np_nysmsc = as.factor(Sex_m_np_nysmsc), Race_m_np_nysmsc = as.factor(Race_m_np_nysmsc), 
+         baseline_ddy = as.numeric(baseline_ddy), 
+         age_baseline = as.numeric(baseline_age), dmt_at_baseline_bin = as.factor(dmt_at_baseline_bin),
+         Cumulative_Relapse_Total = as.numeric(Cumulative_Relapse_Total), onset_age = as.numeric(onset_age), 
+         smoked = as.factor(smoked), Education_Years = as.numeric(Education_Years), 
+         education_level = as.factor(education_level), baseline_hypertension = as.factor(baseline_hypertension), 
+         employment_level = as.factor(employment_level), baseline_bmi = as.numeric(baseline_bmi))
+
+#check missingness
+sapply(impute_db, function(x) sum(is.na(x)))
+
+#check data structure
+str(impute_db)
+
+#initialize imputation
+init=mice(impute_db, maxit=0)
+meth=init$method
+predM=init$predictorMatrix
+
+# Remove variables that you do not want included as a predictor in the imputation, but that you still want imputed. 
+# predM[,c("variable_name")]=0
+
+#remove variables that you don't want imputed, but will still be used for imputation of other variables. 
+meth[c("Subject_ID")]=""
+meth[c("years_observed")]=""
+
+# Set imputation methods per variable type
+meth[c("Sex_m_np_nysmsc")]="logreg"
+meth[c("dmt_at_baseline_bin")]="logreg"
+meth[c("dmt_at_baseline_bin")]="polyreg"
+meth[c("Race_m_np_nysmsc")]="polyreg"
+meth[c("smoked")]="logreg"
+meth[c("baseline_ddy")]="norm"
+meth[c("baseline_bmi")]="norm"
+meth[c("employment_level")]="polyreg"
+meth[c("baseline_hypertension")]="logreg"
+meth[c("Education_Years")]="norm"
+meth[c("education_level")]="polyreg"
+meth[c("onset_age")]="norm"
+meth[c("age_baseline")]="norm"
+meth[c("Cumulative_Relapse_Total")]="norm"
+
+#run the multiple imputation (run five times)
+set.seed(234)
+imputed=mice(impute_db, method=meth, predictorMatrix=predM, m=5)
+
+#create the dataset after imputation
+imputed_db<-complete(imputed) %>% 
+  mutate(Sex_m_np_nysmsc = as.numeric(Sex_m_np_nysmsc), Race_m_np_nysmsc = as.numeric(Race_m_np_nysmsc))
+
+#check for missingness. See is none. Compare to before imputation
+sapply(impute_db, function(x) sum(is.na(x)))
+sapply(imputed_db, function(x) sum(is.na(x)))
+
+imputed_merged <- merge(imputed_db, inverse_of_impute_db, all=TRUE) %>% 
+  mutate(baseline_ddy = ifelse(baseline_ddy<0, NA, baseline_ddy))
+
+```
+
+
+```{r}
+
+#set train and test datasets
+
+#set seed for reproducibility
+set.seed(234)
+
+#define split
+split <- createDataPartition(imputed_merged$conversion, p = 0.6, list = FALSE)
+
+#apply
+course.train <- imputed_merged[split, ]
+course.test <- imputed_merged[-split, ]
+
+#report number of cases per dataset
+nrow(course.train)
+nrow(course.test)
+
+```
+
+

@@ -1,0 +1,363 @@
+---
+title: "Score Development: GAM, AUROC, & LASSO"
+---
+
+
+```{r}
+
+#################################
+# GAM in Training Set Only
+#################################
+
+# Fit the GAM model and plot the graph
+print(course.train$conversion_numeric)
+
+#disease duration
+fitted.model.ddy <- gam(as.numeric(conversion_numeric)~s(as.numeric(baseline_ddy), bs="ps"), method="REML", 
+                          family=binomial, data = course.train)
+cat("\n\n############################\n## Disease Duration\n############################\n\n")
+summary(fitted.model.ddy)
+plot(fitted.model.ddy, shade=T, scale=0, xlab="Disease Duration", ylab="f(Disease Duration)") 
+
+#edss
+fitted.model.edss <- gam(as.numeric(conversion_numeric)~s(as.numeric(baseline_EDSS), bs="ps"), method="REML", 
+                          family=binomial, data = course.train)
+cat("\n\n############################\n## EDSS\n############################\n\n")
+summary(fitted.model.edss)
+plot(fitted.model.edss, shade=T, scale=0, xlab="EDSS", ylab="f(EDSS)") 
+
+#age
+fitted.model.age <- gam(as.numeric(conversion_numeric)~s(as.numeric(age_baseline), bs="ps"), method="REML", 
+                          family=binomial, data = course.train)
+cat("\n\n############################\n## Age\n############################\n\n")
+summary(fitted.model.age)
+plot(fitted.model.age, shade=T, scale=0, xlab="Age", ylab="f(Age)") 
+
+#onset age
+fitted.model.onset <- gam(as.numeric(conversion_numeric)~s(as.numeric(onset_age), bs="ps"), method="REML", 
+                          family=binomial, data = course.train)
+cat("\n\n############################\n## Onset Age\n############################\n\n")
+summary(fitted.model.onset)
+plot(fitted.model.onset, shade=T, scale=0, xlab="Onset Age", ylab="f(Onset Age)") 
+
+
+#sex
+fitted.model.sex <- gam(as.numeric(conversion_numeric)~s(as.numeric(Sex_m_np_nysmsc), bs="ps"),  
+                          family=binomial, data = course.train)
+cat("\n\n############################\n## Sex\n############################\n\n")
+summary(fitted.model.sex)
+plot(fitted.model.sex, shade=T, scale=0, xlab="Male Sex", ylab="f(Male Sex)")
+
+#relapse frequency
+fitted.model.rel <- gam(as.numeric(conversion_numeric)~s(as.numeric(Cumulative_Relapse_Total), bs="ps"),
+                          family=binomial, data = course.train)
+cat("\n\n############################\n## Relapse\n############################\n\n")
+summary(fitted.model.rel)
+plot(fitted.model.rel, shade=T, scale=0, xlab="Cumulative Relapse", ylab="f(Cumulative Relapse)")
+
+# #Ethnicity unrelated.
+fitted.model.eth <- gam(as.numeric(conversion_numeric)~s(as.numeric(Race_m_np_nysmsc), bs="ps"),
+                          family=binomial, data = course.train)
+cat("\n\n############################\n## Ethnicity\n############################\n\n")
+summary(fitted.model.eth)
+plot(fitted.model.eth, shade=T, scale=0,
+     xlab="Ethnicity", ylab="f(Ethnicity)")
+
+#DMT therapy baseline unrelated.  
+fitted.model.dmt <- gam(as.numeric(conversion_numeric)~s(as.numeric(dmt_at_baseline_type), bs="ps"),
+                          family=binomial, data = course.train)
+summary(fitted.model.dmt)
+plot(fitted.model.dmt, shade=T, scale=0, xlab="DMT therapy", ylab="f(DMT Therapy)")
+
+#year of birth 
+fitted.model.year <- gam(as.numeric(conversion_numeric)~s(as.numeric(year_of_birth), bs="ps"),
+                          family=binomial, data = course.train)
+summary(fitted.model.year)
+plot(fitted.model.year, shade=T, scale=0, xlab="Year of Birth", ylab="f(Year of Birth)")
+
+#smoked
+fitted.model.smoked <- gam(as.numeric(conversion_numeric)~s(as.numeric(smoked), bs="ps"),
+                          family=binomial, data = course.train)
+summary(fitted.model.smoked)
+plot(fitted.model.smoked, shade=T, scale=0, xlab="Smoked", ylab="f(Smoked)")
+
+#hypertension
+fitted.model.hypertension <- gam(as.numeric(conversion_numeric)~s(as.numeric(baseline_hypertension), bs="ps"),
+                          family=binomial, data = course.train)
+summary(fitted.model.hypertension)
+plot(fitted.model.hypertension, shade=T, scale=0, xlab="Hypertension", ylab="f(Hypertension)")
+
+#Education
+fitted.model.edu <- gam(as.numeric(conversion_numeric)~s(as.numeric(Education_Years), bs="ps"),
+                          family=binomial, data = course.train)
+summary(fitted.model.edu)
+plot(fitted.model.edu, shade=T, scale=0, xlab="Education", ylab="f(Education)")
+
+
+#Education Level
+fitted.model.edul <- gam(as.numeric(conversion_numeric)~s(as.numeric(education_level), bs="ps"),
+                          family=binomial, data = course.train)
+summary(fitted.model.edul)
+plot(fitted.model.edul, shade=T, scale=0, xlab="Education L", ylab="f(Education L)")
+
+
+#Employment level
+fitted.model.emp <- gam(as.numeric(conversion_numeric)~s(as.numeric(employment_level), bs="ps"),
+                          family=binomial, data = course.train)
+summary(fitted.model.emp)
+plot(fitted.model.emp, shade=T, scale=0, xlab="Emp", ylab="f(Emp)")
+
+#BMI
+fitted.model.bmi <- gam(as.numeric(conversion_numeric)~s(as.numeric(baseline_bmi), bs="ps"),
+                          family=binomial, data = course.train)
+summary(fitted.model.bmi)
+plot(fitted.model.emp, shade=T, scale=0, xlab="BMI", ylab="f(BMI)")
+
+```
+
+
+```{r}
+
+####################################################
+# In training set only
+## Determine risk score cut-offs
+## Compute AUC and AIC and compare AUCs
+####################################################
+
+
+#disease duration cut-off determinations
+ddy_db<- course.train %>% 
+  dplyr::select(baseline_ddy, conversion_numeric) %>%
+  mutate(ddy_cut4 = case_when(baseline_ddy<6 ~ 0, 
+                             (baseline_ddy>=6 & baseline_ddy<9) ~ 1,
+                              baseline_ddy>=9 & baseline_ddy<12 ~ 2, 
+                             baseline_ddy>=12 ~ 3)) %>% 
+  mutate(ddy_cut3 = case_when(baseline_ddy<6 ~ 0, 
+                             (baseline_ddy >=9 & baseline_ddy<12) ~ 1,
+                              baseline_ddy>=12 ~ 2)) %>% 
+  mutate(ddy_cut2 = case_when(baseline_ddy<9 ~ 0, 
+                              baseline_ddy>=9 ~ 1)) 
+ddy_db<- na.omit(ddy_db) 
+
+fit.ddy.cut.2<-glm(conversion_numeric~ddy_cut2,family=binomial, data=ddy_db)
+fit.ddy.cut.3<-glm(conversion_numeric~ddy_cut3,family=binomial, data=ddy_db)
+fit.ddy.cut.4<-glm(conversion_numeric~ddy_cut4,family=binomial, data=ddy_db)
+fitted.model.ddy <- gam(as.numeric(conversion_numeric)~s(as.numeric(baseline_ddy), bs="ps"), method="REML", 
+                          family=binomial, data = ddy_db)
+
+roc.gam = roc(ddy_db$conversion_numeric ~ fitted.model.ddy$fitted.values)
+roc.ddycut2 = roc(ddy_db$conversion_numeric ~ fit.ddy.cut.2$fitted.values)
+roc.ddycut3 = roc(ddy_db$conversion_numeric ~ fit.ddy.cut.3$fitted.values)
+roc.ddycut4 = roc(ddy_db$conversion_numeric ~ fit.ddy.cut.4$fitted.values)
+
+roc.test(roc.ddycut2,roc.gam)
+roc.test(roc.ddycut3,roc.gam)
+roc.test(roc.ddycut4,roc.gam)
+roc.test(roc.ddycut2,roc.ddycut3)
+
+#EDSS cutoff determinations
+edss_db <- course.train %>% 
+  dplyr::select(baseline_EDSS, conversion_numeric) %>%
+   mutate(edss_cut4 = case_when(baseline_EDSS<2.0 ~ 0, 
+                             (baseline_EDSS >=2.0 & baseline_EDSS < 3.0) ~ 1,
+                              (baseline_EDSS >= 3.0 & baseline_EDSS < 4.0) ~ 2, 
+                             baseline_EDSS>=4.0 ~ 3)) %>% 
+   mutate(edss_cut3 = case_when(baseline_EDSS<3.0 ~ 0, 
+                             (baseline_EDSS >=3.0 & baseline_EDSS < 4.0) ~ 1,
+                              baseline_EDSS >= 4.0 ~ 2)) %>% 
+  mutate(edss_cut2 = case_when(baseline_EDSS < 4.0 ~ 0, 
+                              baseline_EDSS >= 4.0 ~ 1)) 
+edss_db<- na.omit(edss_db) 
+
+fit.edss.cut.2<-glm(conversion_numeric~edss_cut2,family=binomial, data=edss_db)
+fit.edss.cut.3<-glm(conversion_numeric~edss_cut3,family=binomial, data=edss_db)
+fit.edss.cut.4<-glm(conversion_numeric~edss_cut4,family=binomial, data=edss_db)
+fitted.model.edss <- gam(as.numeric(conversion_numeric)~s(as.numeric(baseline_EDSS), bs="ps"), method="REML", 
+                          family=binomial, data = edss_db)
+
+roc.edssgam = roc(edss_db$conversion_numeric ~ fitted.model.edss$fitted.values)
+roc.edsscut2 = roc(edss_db$conversion_numeric ~ fit.edss.cut.2$fitted.values)
+roc.edsscut3 = roc(edss_db$conversion_numeric ~ fit.edss.cut.3$fitted.values)
+roc.edsscut4 = roc(edss_db$conversion_numeric ~ fit.edss.cut.4$fitted.values)
+
+roc.test(roc.edsscut2,roc.edssgam)
+roc.test(roc.edsscut3,roc.edssgam)
+roc.test(roc.edsscut4,roc.edssgam)
+roc.test(roc.edsscut2,roc.edsscut3)
+roc.test(roc.edsscut3,roc.edsscut4)
+
+
+#Age cutoff determinations
+age_db <- course.train %>% 
+  dplyr::select(age_baseline, conversion_numeric) %>%
+  mutate(age_cut4 = case_when(age_baseline < 40 ~ 0, 
+                             (age_baseline >= 40 & age_baseline < 45) ~ 1,
+                             age_baseline >=45 & age_baseline<50 ~ 2,
+                              age_baseline >= 50 ~ 3)) %>% 
+  mutate(age_cut3 = case_when(age_baseline < 40 ~ 0, 
+                             (age_baseline >= 40 & age_baseline < 48) ~ 1,
+                              age_baseline >= 48 ~ 2)) %>% 
+  mutate(age_cut2 = case_when(age_baseline < 40 ~ 0, 
+                              age_baseline >= 40 ~ 1)) 
+age_db<- na.omit(age_db) 
+
+fit.age.cut.2<-glm(conversion_numeric~age_cut2,family=binomial, data=age_db)
+fit.age.cut.3<-glm(conversion_numeric~age_cut3,family=binomial, data=age_db)
+fit.age.cut.4<-glm(conversion_numeric~age_cut4,family=binomial, data=age_db)
+fitted.model.age <- gam(as.numeric(conversion_numeric)~s(as.numeric(age_baseline), bs="ps"), method="REML", 
+                          family=binomial, data = age_db)
+
+
+roc.agegam = roc(age_db$conversion_numeric ~ fitted.model.age$fitted.values)
+roc.agecut2 = roc(age_db$conversion_numeric ~ fit.age.cut.2$fitted.values)
+roc.agecut3 = roc(age_db$conversion_numeric ~ fit.age.cut.3$fitted.values)
+roc.agecut4 = roc(age_db$conversion_numeric ~ fit.age.cut.4$fitted.values)
+
+roc.test(roc.agecut2,roc.agegam)
+roc.test(roc.agecut3,roc.agegam)
+roc.test(roc.agecut2,roc.agecut3)
+roc.test(roc.agecut3,roc.agecut4)
+roc.test(roc.agegam,roc.agecut4)
+
+
+#Onset Cutoff determinations  
+onset_db <- course.train %>% 
+  dplyr::select(onset_age, conversion_numeric) %>%
+  mutate(onset_cut2 = case_when(onset_age < 34 ~ 0, 
+                             onset_age >= 34 ~ 1)) %>%
+  mutate(onset_cut3 = case_when(onset_age < 34 ~ 0,
+                              onset_age >=34 & onset_age < 40 ~ 1, onset_age>=40 ~ 2)) %>%
+  mutate(onset_cut4 = case_when(onset_age < 34 ~ 0,
+                              onset_age >=34 & onset_age < 40 ~ 1, onset_age>=40 & onset_age< 44 ~ 2,
+                              onset_age>=44 ~ 3))
+
+onset_db<- na.omit(onset_db) 
+
+fit.onset.cut.2<-glm(conversion_numeric~onset_cut2,family=binomial, data=onset_db)
+fit.onset.cut.3<-glm(conversion_numeric~onset_cut3,family=binomial, data=onset_db)
+fit.onset.cut.4<-glm(conversion_numeric~onset_cut4,family=binomial, data=onset_db)
+fitted.model.onset <- gam(as.numeric(conversion_numeric)~s(as.numeric(onset_age), bs="ps"), method="REML",
+                          family=binomial, data = onset_db)
+
+
+roc.onsetgam = roc(onset_db$conversion_numeric ~ fitted.model.onset$fitted.values)
+roc.onsetcut2 = roc(onset_db$conversion_numeric ~ fit.onset.cut.2$fitted.values)
+roc.onsetcut3 = roc(onset_db$conversion_numeric ~ fit.onset.cut.3$fitted.values)
+roc.onsetcut4 = roc(onset_db$conversion_numeric ~ fit.onset.cut.4$fitted.values)
+
+roc.test(roc.onsetcut2,roc.onsetgam)
+roc.test(roc.onsetcut3,roc.onsetgam)
+roc.test(roc.onsetcut4,roc.onsetgam)
+roc.test(roc.onsetcut2,roc.onsetcut3)
+roc.test(roc.onsetcut3,roc.onsetcut4)
+roc.test(roc.onsetcut2,roc.onsetcut4)
+
+
+```
+
+```{r}
+
+#####################################################################################################################
+## LASSO Regression, Coefficient determination and Model Factor Selection
+####################################################################################################################
+
+#create the categorical predictor variables for lasso regression coefficient determination. 
+course.train_binary_analysis<-course.train %>% 
+  filter(!is.na(conversion_numeric)) %>% 
+    mutate(edss_cut3 = case_when(baseline_EDSS<2.0 ~ 0, 
+                             (baseline_EDSS >=2.0 & baseline_EDSS < 3.0) ~ 1,
+                              baseline_EDSS >= 3.0 & baseline_EDSS<4.0 ~ 2, 
+                              baseline_EDSS>=4.0 ~ 3)) %>%
+   mutate(age_cut3 = case_when(age_baseline < 34 ~ 0, 
+                             (age_baseline >= 34 & age_baseline<40) ~ 1, 
+                             age_baseline>=40 ~ 2)) %>%   
+   mutate(ddy_cut3 = case_when(baseline_ddy<6 ~ 0, 
+                             (baseline_ddy >=6 & baseline_ddy<9) ~ 1,
+                              baseline_ddy>=9 & baseline_ddy<12~2,
+                             baseline_ddy>=12 ~ 3)) %>% 
+    mutate(onset_cut3 = case_when(onset_age < 34 ~ 0,
+                              onset_age>=34~ 1)) %>% 
+  dplyr::select(conversion_numeric, edss_cut3, ddy_cut3, age_cut3, onset_cut3) %>% 
+  filter(!is.na(edss_cut3) & !is.na(ddy_cut3) & !is.na(age_cut3) & !is.na(onset_cut3))
+
+# Prepare your data
+x_train <- model.matrix(conversion_numeric ~ ., data = course.train_binary_analysis)
+y_train <- course.train_binary_analysis$conversion_numeric
+
+# Fit model with cross-validation (lasso for feature selection)
+lasso_model <- cv.glmnet(x_train, y_train, family = "binomial", alpha = 1)
+
+# Determine the optimal lambda value
+lasso_best_lambda <- lasso_model$lambda.min
+lasso_best_lambda
+
+# Fit the final model with the optimal lambda
+lasso_final_model <- glmnet(x_train, y_train, family = "binomial", alpha = 1, lambda = lasso_best_lambda)
+
+# Retrieve the coefficients
+lasso_coefs <- coef(lasso_final_model)
+lasso_coefs
+
+```
+# Lasso ridge coefficients on run 05 june 2023. 
+See that EDSS coefficient is about twice that of ddy and age. 
+(Intercept) -3.7379576
+(Intercept)  .        
+edss_cut3    1.1210290
+ddy_cut3     0.3520591
+age_cut3     0.4061814
+onset_cut3   0.2315882
+
+
+```{r}
+
+#create score based on feature selection & cutoff determinations made above
+imputed_merged <- imputed_merged %>%
+  mutate(desaa = 0) %>%
+  mutate(desaa = ifelse(baseline_EDSS>=2.0 & baseline_EDSS<3.0, desaa+2, desaa)) %>%
+  mutate(desaa = ifelse(baseline_EDSS>=3.0 & baseline_EDSS<4.0, desaa+4, desaa)) %>%
+  mutate(desaa = ifelse(baseline_EDSS>=4.0, desaa+6, desaa)) %>%
+  mutate(desaa = ifelse((age_baseline >= 40 & age_baseline < 50), desaa+1, 
+                        ifelse((age_baseline >= 50), desaa+2, 
+                               desaa))) %>%
+  mutate(desaa = ifelse((baseline_ddy >= 7 & baseline_ddy < 10), desaa+1, desaa
+                    )) %>%
+  mutate(desaa = ifelse((baseline_ddy >= 10 & baseline_ddy<12), desaa+2, 
+                        ifelse(baseline_ddy>=12, desaa+3, desaa)
+                    )) %>%
+  mutate(desaa = ifelse(onset_age>=34, desaa+1, desaa)) %>%
+  mutate(desaa_group4 = case_when(desaa < 3 ~ "very low", 
+                                 (desaa>=3 & desaa<8) ~ "low",
+                                 desaa>=8 & desaa<10 ~ "medium",
+                                 desaa >=10 ~ "high")) %>%
+  mutate(desaa_group4 = factor(desaa_group4, levels=c("very low", "low", "medium", "high")))
+
+
+```
+
+
+
+```{r}
+
+############################################################################
+# re-create test and train, same groups as in first section of study
+############################################################################
+
+#set same seed as in previous steps to ensure reproduced separation of derivation (train) & internal validation (test) data
+set.seed(234)
+
+#define split
+split <- createDataPartition(imputed_merged$conversion, p = 0.6, list = FALSE)
+
+#apply
+course.train <- imputed_merged[split, ]
+course.test <- imputed_merged[-split, ]
+
+#report
+table(imputed_merged$desaa)
+table(imputed_merged$desaa_group4)
+
+
+```
+
+
