@@ -299,14 +299,6 @@ lasso_coefs <- coef(lasso_final_model)
 lasso_coefs
 
 ```
-# Lasso ridge coefficients on run 05 june 2023. 
-See that EDSS coefficient is about twice that of ddy and age. 
-(Intercept) -3.7379576
-(Intercept)  .        
-edss_cut3    1.1210290
-ddy_cut3     0.3520591
-age_cut3     0.4061814
-onset_cut3   0.2315882
 
 
 ```{r}
