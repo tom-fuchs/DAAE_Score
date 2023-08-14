@@ -1,0 +1,26 @@
+---
+title: "Separate into Development and Internal Validation Datasets"
+---
+
+
+```{r}
+
+#set train and test datasets
+
+#set seed for reproducibility
+set.seed(234)
+
+#define split, keeping outcome variable balanced between groups
+split <- createDataPartition(full_db$outcome_variable, p = 0.6, list = FALSE)
+
+#apply
+course.train <- full_db[split, ]
+course.test <- full_db[-split, ]
+
+#report number of cases per dataset
+nrow(course.train)
+nrow(course.test)
+
+```
+
+
