@@ -1,7 +1,7 @@
 # DAAE_Score
 Development &amp; Validation of the DAAE Risk Score
 
-The DAAE Score was developed for estimating risk of conversion to secondary progressive multiple sclerosis over five years. It was developed for use in relapsing-remitting multiple sclerosis patients patients. 
+The DAAE Score was developed for estimating risk of conversion to secondary progressive multiple sclerosis over five years. It was developed for use in relapsing-remitting multiple sclerosis patients. 
 
 The tool is publicly available at: https://tomfuchs.shinyapps.io/DAAE_Score_v1-0/
 
