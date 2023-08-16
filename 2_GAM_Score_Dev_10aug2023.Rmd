@@ -226,13 +226,7 @@ full_db <- full_db %>%
 # E. re-establish test and train, same groups as in first section of study
 ############################################################################
 
-#set same seed as in previous steps to ensure reproduced separation of derivation (train) & internal validation (test) data
-set.seed(234)
-
-#define split, keeping outcome variable balanced between groups
-split <- createDataPartition(full_db$outcome_variable, p = 0.6, list = FALSE)
-
-#apply
+#re-apply previously established train-test split
 course.train <- full_db[split, ]
 course.test <- full_db[-split, ]
 
