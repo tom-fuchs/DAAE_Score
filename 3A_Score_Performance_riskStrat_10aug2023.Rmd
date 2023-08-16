@@ -2,11 +2,14 @@
 title: "Primary Score Validation, Risk Stratification"
 ---
 
+# Risk_score Score Performance in separate training and testing datasets
 
 
 ```{r}
 
-#### risk_score Score Performance in separate training and testing datasets
+
+#set max risk score number
+max_score<-max(full_db$risk_score)
 
 #define function for reporting event proportions
 conf_ints_conv<-function(props, sums){
@@ -18,6 +21,7 @@ cat("###########################################################################
 ##Proportions event Per Risk Group in Training Dataset
 ###########################################################################\n\n")
 
+#report number and percent of subjects per risk score and per risk groups. 
 cat("\npatients per risk score\n")
 table(course.train$risk_score)
 cat("\npercent per risk score\n")
@@ -29,7 +33,7 @@ table(course.train$risk_score_group4)/nrow(course.train)*100
 cat("\n\n")
 
 
-#risk group proportions
+#Report outcome risk proportions per risk group
 for (i in c("very low", "low", "medium", "high")){
   risk_num<-paste("risk",i, sep = "")
   proportion_report_title<-paste("eventers versus Stable in patient With Risk Group",i)
@@ -50,8 +54,8 @@ for (i in c("very low", "low", "medium", "high")){
   cat("\n\n")
 }
 
-#risk score proportions
-for (i in c(0:10)){
+#Report outcome risk proportions per risk score
+for (i in c(0:max_score)){
   risk_num<-paste("risk",i, sep = "")
   proportion_report_title<-paste("eventers versus Stable in Patient With Risk Score",i)
   print(proportion_report_title)
@@ -68,10 +72,16 @@ for (i in c(0:10)){
   cat("\n\n")
 }
 
+```
+
+
+```{r}
+
 cat("###########################################################################
 ##Proportions event Per Risk Group in Testing Dataset
 ###########################################################################\n\n")
 
+#report number and percent of subjects per risk score and per risk groups. 
 cat("\npatients per risk score\n")
 table(course.test$risk_score)
 cat("\npercent per risk score\n")
@@ -82,7 +92,7 @@ cat("\n\npercent per risk group\n")
 table(course.test$risk_score_group4)/nrow(course.test)*100
 cat("\n\n")
 
-#risk group proportions
+#Report outcome risk proportions per risk group
 for (i in c("very low", "low", "medium", "high")){
   risk_num<-paste("risk",i, sep = "")
   proportion_report_title<-paste("eventers versus Stable in Patient With Risk Group",i)
@@ -103,8 +113,10 @@ for (i in c("very low", "low", "medium", "high")){
   cat("\n\n")
 }
 
-#risk score proportions
-for (i in c(0:10)){
+
+
+#Report outcome risk proportions per risk score
+for (i in c(0:max_score)){
   risk_num<-paste("risk",i, sep = "")
   proportion_report_title<-paste("Eventers versus Stable in Patient With Risk Score",i)
   print(proportion_report_title)
@@ -121,4 +133,6 @@ for (i in c(0:10)){
   cat("\n\n")
 }
 
+
 ```
+
