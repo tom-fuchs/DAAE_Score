@@ -5,7 +5,7 @@ This work supported by the European Consortium for Treatment and Research in Mul
 
 The DAAE Score was developed for estimating risk of conversion to secondary progressive multiple sclerosis over five years. It was developed for use in relapsing-remitting multiple sclerosis patients. 
 
-The tool is publicly available at: https://tomfuchs.shinyapps.io/DAAE_Score_v1-0/
+The tool is publicly available at: https://tomfuchs.shinyapps.io/DAAE_Score_v1-2/
 
 The code provided, written for R Notebooks, is meant as a public guideline for reproduction of the protocols used for the development of the DAAE Score. Risk calculators can have uses for a variety of outcomes, and the code provided could be adapted for use in a variety of clinical research applications.  
 
