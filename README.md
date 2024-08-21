@@ -13,3 +13,9 @@ Risk estimates in the DAAE Score are based on combined data from the United Stat
 These estimates were generated using data from people with relapsing-remitting multiple sclerosis who were mostly female and mostly receiving low-efficacy disease modifying therapy. Risk is reported as a percent with 95% confidence intervals (CI)
 
 The DAAE Score is named from the factors included in the predictive model: Disease Duration, Age at Disease Onset, Age, Expanded Disease Status Scale
+
+For more information, see the preliminary publication https://www.sciencedirect.com/science/article/pii/S2211034824003328
+To cite:
+Fuchs TA, Zivadinov R, Pryshchepova T, et al. Clinical risk stratification: Development and validation of the DAAE score, a tool for estimating patient risk of transition to secondary progressive multiple sclerosis. Mult Scler Relat Disord. 2024;89:105755. doi:10.1016/j.msard.2024.105755
+
+
